@@ -16,7 +16,9 @@ fi
 usermod -aG wheel "$USERNAME"
 
 # Create .ssh directory and authorized_keys file with correct permissions
-USER_HOME=$(eval echo ~"$USERNAME")
+#USER_HOME=$(eval echo ~"$USERNAME")
+# Get the home directory of the specified username
+USER_HOME=$(getent passwd "$USERNAME" | cut -d: -f6)
 SSH_DIR="$USER_HOME/.ssh"
 mkdir -p "$SSH_DIR"
 chmod 700 "$SSH_DIR"
@@ -31,6 +33,9 @@ else
     exit 1
 fi
 
-# Set the appropriate permissions
+# Set the appropriate ownership and permissions
 chown -R "$USERNAME":"$USERNAME" "$SSH_DIR"
+chmod 700 "$SSH_DIR"
 chmod 600 "$SSH_DIR/authorized_keys"
+
+echo "User $USERNAME has been set up with SSH access."

@@ -30,11 +30,8 @@ resource "aws_instance" "ec2_instance" {
   ami           = var.ami_id
   instance_type = var.instance_type
   key_name      = module.ec2_key_pair.key_pair_name
-
-  user_data = templatefile("${path.module}/scripts/userdata.sh", {
-    USERNAME        = var.name,
-    PUBLIC_KEY_PATH = "${path.module}/keystore/${module.ec2_key_pair.key_pair_name}.pem"
-  })
+  #key_name = "cloudsheger"
+  user_data = data.template_file.user_data.rendered
 
   tags = {
     Name        = var.instance_name
