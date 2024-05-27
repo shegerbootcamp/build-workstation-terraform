@@ -1,0 +1,15 @@
+#cloud-config
+users:
+  - default
+  - name: ${USERNAME}
+    gecos: ${USERNAME}
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: wheel
+    lock_passwd: false
+    ssh-authorized-keys:
+      - ${PUBLIC_KEY_CONTENT}
+
+runcmd:
+  - yum install -y https://repo.ius.io/ius-release-el7.rpm
+  - yum install -y python3.11 git

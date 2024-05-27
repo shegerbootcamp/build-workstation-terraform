@@ -39,7 +39,6 @@ variable "project" {
 }
 
 variable "name" {
+  description = "The username to be created"
   type        = string
-  description = "The name of the user to create for SSH access."
-  default     = "ec2-user"
 }

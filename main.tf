@@ -3,10 +3,8 @@ provider "aws" {
 }
 
 module "ec2_key_pair" {
-  //source = "../terraform-ssh-module" # Update this path to where your module is located
   source = "git::https://github.com/jemalcloud/terrafom-ssh-module.git"
-  //"git::ssh://username@example.com/storage.git"
-  name = var.name
+  name   = var.name
   tags = {
     Environment = var.environment
     Project     = var.project
@@ -24,18 +22,30 @@ resource "null_resource" "fetch_public_key" {
   depends_on = [module.ec2_key_pair]
 }
 
+data "local_file" "public_key" {
+  filename  = "${path.module}/keystore/${module.ec2_key_pair.key_pair_name}.pem"
+  depends_on = [null_resource.fetch_public_key]
+}
 
+data "template_file" "cloud_init" {
+  template = file("${path.module}/cloud-init.yaml")
+  vars = {
+    USERNAME           = var.name
+    PUBLIC_KEY_CONTENT = data.local_file.public_key.content
+  }
+}
 
 resource "aws_instance" "ec2_instance" {
   ami           = var.ami_id
   instance_type = var.instance_type
   key_name      = module.ec2_key_pair.key_pair_name
-  #key_name = "cloudsheger"
-  user_data = data.template_file.user_data.rendered
+  user_data     = data.template_file.cloud_init.rendered
 
   tags = {
     Name        = var.instance_name
     Environment = var.environment
     Project     = var.project
   }
+
+  depends_on = [null_resource.fetch_public_key]
 }

@@ -9,13 +9,11 @@ output "tls_private_ssm" {
   sensitive   = true
 }
 
-output "tls_public_rsa_ssm" {
-  value       = module.ec2_key_pair.tls_public_rsa_ssm
-  description = "Private key RSA."
-  sensitive   = true
-}
-
 output "tls_public_ssm" {
   value       = module.ec2_key_pair.tls_public_ssm
   description = "Public key."
+}
+
+output userdata {
+  value = "\n${data.template_file.cloud_init.rendered}"
 }
