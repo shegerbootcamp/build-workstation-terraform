@@ -1,4 +1,10 @@
 #cloud-config
+write_files:
+  - path: /tmp/userdata.sh
+    permissions: '0755'
+    content: |
+      ${file("scripts/userdata.sh")}
+
 users:
   - default
   - name: ${USERNAME}
@@ -11,5 +17,4 @@ users:
       - ${PUBLIC_KEY_CONTENT}
 
 runcmd:
-  - yum install -y https://repo.ius.io/ius-release-el7.rpm
-  - yum install -y python3.11 git
+  - /tmp/userdata.sh
