@@ -35,11 +35,33 @@ data "template_file" "cloud_init" {
   }
 }
 
+# Render a part using a `template_file`
+data "template_file" "script" {
+  template = "${file("${path.module}/scripts/userdata.tpl")}"
+}
+
+data "template_cloudinit_config" "config" {
+  gzip          = true
+  base64_encode = true
+
+  part {
+    filename     = "cloud-init.yaml"
+    content_type = "text/cloud-config"
+    content      = data.template_file.cloud_init.rendered
+  }
+
+  part {
+    filename     = "init.tpl"
+    content_type = "text/x-shellscript"
+    content      = data.template_file.script.rendered
+  }
+}
+
 resource "aws_instance" "ec2_instance" {
   ami           = var.ami_id
   instance_type = var.instance_type
   key_name      = module.ec2_key_pair.key_pair_name
-  user_data     = data.template_file.cloud_init.rendered
+  user_data_base64 = "${data.template_cloudinit_config.config.rendered}"
 
   tags = {
     Name        = var.instance_name

@@ -1,10 +1,4 @@
 #cloud-config
-write_files:
-  - path: /tmp/userdata.sh
-    permissions: '0755'
-    content: |
-      ${file("scripts/userdata.sh")}
-
 users:
   - default
   - name: ${USERNAME}
@@ -15,6 +9,3 @@ users:
     lock_passwd: false
     ssh-authorized-keys:
       - ${PUBLIC_KEY_CONTENT}
-
-runcmd:
-  - /tmp/userdata.sh
