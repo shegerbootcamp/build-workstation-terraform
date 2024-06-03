@@ -17,3 +17,6 @@ output "tls_public_ssm" {
 output userdata {
   value = "\n${data.template_file.cloud_init.rendered}"
 }
+output ec2-configure {
+  value = "\n${data.template_file.script.rendered}"
+}

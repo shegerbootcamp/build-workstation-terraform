@@ -43,13 +43,13 @@ data "template_file" "script" {
 data "template_cloudinit_config" "config" {
   gzip          = true
   base64_encode = true
-
+# add userdata in the cloud config
   part {
     filename     = "cloud-init.yaml"
     content_type = "text/cloud-config"
     content      = data.template_file.cloud_init.rendered
   }
-
+# add additional server config script
   part {
     filename     = "init.tpl"
     content_type = "text/x-shellscript"

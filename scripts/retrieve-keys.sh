@@ -9,6 +9,7 @@ fi
 USERNAME=$1
 
 # Directory to store keys
+mkdir -p aws-access-keys
 KEY_DIR="aws-access-keys"
 
 # Remove existing keys if they exist
