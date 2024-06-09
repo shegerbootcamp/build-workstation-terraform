@@ -1,5 +1,10 @@
 pipeline {
-    agent any
+    agent {
+        dockerfile {
+            filename 'Dockerfile'
+            label 'my-terraform-image'
+        }
+    }
 
     parameters {
         string(name: 'name', defaultValue: '', description: 'The name variable for Terraform')
