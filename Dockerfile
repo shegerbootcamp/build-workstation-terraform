@@ -27,7 +27,8 @@ RUN apk --no-cache add \
     gcc \
     libffi-dev \
     musl-dev \
-    openssl-dev
+    openssl-dev \
+    make # <-- Added make here
 
 # Create and activate a virtual environment
 RUN python3 -m venv /venv
