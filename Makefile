@@ -1,5 +1,5 @@
 # Define the SSH username as a variable
-SSH_USERNAME ?= 
+name ?= 
 
 .PHONY: all init plan apply destroy help
 
@@ -8,34 +8,34 @@ all: init plan apply
 
 # Initialize Terraform workspace and run terraform init
 init:
-	@if [ -z "$(SSH_USERNAME)" ]; then \
-		echo "Error: SSH_USERNAME is not set. Please provide SSH_USERNAME=<ssh-username>."; \
+	@if [ -z "$(name)" ]; then \
+		echo "Error: name is not set. Please provide name=<ssh-username>."; \
 		exit 1; \
 	fi
-	@if terraform workspace list | grep -q "$(SSH_USERNAME)"; then \
-		read -p "Workspace $(SSH_USERNAME) already exists. Do you want to override it? (yes/no) " CONFIRM; \
+	@if terraform workspace list | grep -q "$(name)"; then \
+		read -p "Workspace $(name) already exists. Do you want to override it? (yes/no) " CONFIRM; \
 		if [ "$$CONFIRM" != "yes" ]; then \
 			echo "Initialization cancelled."; \
 			exit 1; \
 		fi; \
 	fi
-	@echo "Creating or selecting Terraform workspace: $(SSH_USERNAME)"
-	@terraform workspace new $(SSH_USERNAME) || terraform workspace select $(SSH_USERNAME)
+	@echo "Creating or selecting Terraform workspace: $(name)"
+	@terraform workspace new $(name) || terraform workspace select $(name)
 	@terraform init
 
 # Run terraform plan with the provided SSH username
 plan:
-	@if [ -z "$(SSH_USERNAME)" ]; then \
-		echo "Error: SSH_USERNAME is not set. Please provide SSH_USERNAME=<ssh-username>."; \
+	@if [ -z "$(name)" ]; then \
+		echo "Error: name is not set. Please provide name=<ssh-username>."; \
 		exit 1; \
 	fi
-	@echo "Running terraform plan with name=$(SSH_USERNAME)"
-	@terraform plan -var "name=$(SSH_USERNAME)"
+	@echo "Running terraform plan with name=$(name)"
+	@terraform plan -var "name=$(name)"
 
 # Run terraform apply with the provided SSH username
 apply:
-	@if [ -z "$(SSH_USERNAME)" ]; then \
-		echo "Error: SSH_USERNAME is not set. Please provide SSH_USERNAME=<ssh-username>."; \
+	@if [ -z "$(name)" ]; then \
+		echo "Error: name is not set. Please provide name=<ssh-username>."; \
 		exit 1; \
 	fi
 	@read -p "Are you sure you want to apply changes? [yes/no]: " answer; \
@@ -43,22 +43,22 @@ apply:
 		echo "Aborting apply."; \
 		exit 1; \
 	fi; \
-	echo "Running terraform apply with name=$(SSH_USERNAME)"; \
-	terraform apply -var "name=$(SSH_USERNAME)"
+	echo "Running terraform apply with name=$(name)"; \
+	terraform apply -var "name=$(name)"
 
 # Destroy Terraform-managed resources
 destroy:
-	@if [ -z "$(SSH_USERNAME)" ]; then \
-		echo "Error: SSH_USERNAME is not set. Please provide SSH_USERNAME=<ssh-username>."; \
+	@if [ -z "$(name)" ]; then \
+		echo "Error: name is not set. Please provide name=<ssh-username>."; \
 		exit 1; \
 	fi
-	@echo "Destroying Terraform-managed resources for workspace: $(SSH_USERNAME)"
-	@terraform destroy -var "name=$(SSH_USERNAME)"
+	@echo "Destroying Terraform-managed resources for workspace: $(name)"
+	@terraform destroy -var "name=$(name)"
 
 # Display help message
 help:
 	@echo "Usage:"
-	@echo "  make [target] SSH_USERNAME=<ssh-username>"
+	@echo "  make [target] name=<ssh-username>"
 	@echo ""
 	@echo "Targets:"
 	@echo "  all      - Runs init, plan, and apply in sequence"

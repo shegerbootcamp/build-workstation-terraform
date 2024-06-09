@@ -1,96 +1,64 @@
 pipeline {
     agent any
 
-    environment {
-        SSH_USERNAME = '' // Set the SSH_USERNAME here or pass it as a parameter
-    }
-
     parameters {
-        string(name: 'SSH_USERNAME', defaultValue: '', description: 'The SSH username to use for Terraform workspace')
-        string(name: 'AWS_CREDENTIALS_ID', defaultValue: '', description: 'The AWS credentials ID to use')
-        booleanParam(name: 'DESTROY', defaultValue: false, description: 'Check this to run destroy after apply')
+        string(name: 'name', defaultValue: '', description: 'The name variable for Terraform')
+        string(name: 'awsCredentialsId', defaultValue: '', description: 'AWS credentials ID')
     }
 
     stages {
-        stage('Build Docker Image') {
+        stage('Download terraform.tfvars') {
             steps {
                 script {
-                    dockerImage = docker.build("my-terraform-image", ".")
+                    // Download terraform.tfvars from S3 bucket
+                    sh 'aws s3 cp s3://tfvars2024/terraform.tfvars .'
                 }
             }
         }
 
-        stage('Init') {
-            agent {
-                docker {
-                    image 'my-terraform-image'
-                }
-            }
+        stage('Initialize') {
             steps {
                 script {
-                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.AWS_CREDENTIALS_ID]]) {
-                        if (!params.SSH_USERNAME) {
-                            error "SSH_USERNAME is not set. Please provide SSH_USERNAME."
-                        }
-                        sh "make init SSH_USERNAME=${params.SSH_USERNAME}"
+                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                        sh 'terraform init'
                     }
                 }
             }
         }
 
         stage('Plan') {
-            agent {
-                docker {
-                    image 'my-terraform-image'
-                }
-            }
             steps {
                 script {
-                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.AWS_CREDENTIALS_ID]]) {
-                        if (!params.SSH_USERNAME) {
-                            error "SSH_USERNAME is not set. Please provide SSH_USERNAME."
+                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.awsCredentialsId]]) {
+                            sh "terraform plan -var-file=terraform.tfvars -var='name=${params.name}'"
                         }
-                        sh "make plan SSH_USERNAME=${params.SSH_USERNAME}"
                     }
                 }
             }
         }
 
         stage('Apply') {
-            agent {
-                docker {
-                    image 'my-terraform-image'
-                }
-            }
             steps {
                 script {
-                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.AWS_CREDENTIALS_ID]]) {
-                        if (!params.SSH_USERNAME) {
-                            error "SSH_USERNAME is not set. Please provide SSH_USERNAME."
-                        }
+                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                         input message: "Are you sure you want to apply changes?", ok: "Yes"
-                        sh "make apply SSH_USERNAME=${params.SSH_USERNAME}"
+                        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.awsCredentialsId]]) {
+                            sh "terraform apply -var-file=terraform.tfvars -var='name=${params.name}'"
+                        }
                     }
                 }
             }
         }
 
         stage('Destroy') {
-            when {
-                expression { return params.DESTROY }
-            }
-            agent {
-                docker {
-                    image 'my-terraform-image'
-                }
-            }
             steps {
                 script {
-                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.AWS_CREDENTIALS_ID]]) {
-                        if (!params.SSH_USERNAME) {
-                            error "SSH_USERNAME is not set. Please provide SSH_USERNAME."
+                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                        input message: "Are you sure you want to destroy resources?", ok: "Yes"
+                        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.awsCredentialsId]]) {
+                            sh "terraform destroy -var-file=terraform.tfvars -var='name=${params.name}'"
                         }
-                        sh "make destroy SSH_USERNAME=${params.SSH_USERNAME}"
                     }
                 }
             }
