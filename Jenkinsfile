@@ -64,7 +64,6 @@ pipeline {
             steps {
                 script {
                     unstash 'tfvars'
-                    unstash 'tfstate'
                     catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.awsCredentialsId]]) {
                             sh "terraform apply -var-file=terraform.tfvars -var='name=${params.name}' -auto-approve"
