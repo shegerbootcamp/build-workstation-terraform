@@ -1,9 +1,6 @@
 pipeline {
     agent {
-        dockerfile {
-            filename 'Dockerfile'
-            label 'my-terraform-image'
-        }
+        dockerfile true
     }
 
     parameters {
