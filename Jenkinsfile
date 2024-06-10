@@ -6,6 +6,7 @@ pipeline {
     parameters {
         string(name: 'name', defaultValue: '', description: 'The name variable for Terraform')
         string(name: 'awsCredentialsId', defaultValue: '', description: 'AWS credentials ID')
+        booleanParam(name: 'destroy', defaultValue: false, description: 'Check this to run destroy after apply')
     }
 
     stages {
@@ -55,6 +56,9 @@ pipeline {
         }
 
         stage('Destroy') {
+            when {
+                expression { return params.destroy }
+            }
             steps {
                 script {
                     catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
