@@ -30,10 +30,9 @@ pipeline {
         stage('Initialize') {
             steps {
                 script {
-                    unstash 'tfvars'
                     catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                         sh 'terraform init'
-                        stash includes: 'terraform.tfstate, terraform.tfstate.*', name: 'tfstate'
+                        
                     }
                 }
             }
