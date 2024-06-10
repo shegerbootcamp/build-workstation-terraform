@@ -11,11 +11,6 @@ pipeline {
 
     stages {
         stage('Download terraform.tfvars') {
-            when {
-                not {
-                    expression { return params.destroy }
-                }
-            }
             steps {
                 script {
                     // Download terraform.tfvars from S3 bucket
@@ -30,9 +25,12 @@ pipeline {
         stage('Initialize') {
             steps {
                 script {
-                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                        sh 'terraform init'
-                        
+                    unstash 'tfvars'
+                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.awsCredentialsId]]) {
+                        catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                            sh 'terraform init'
+                        }
+                        sh "terraform workspace new ${params.name} || terraform workspace select ${params.name}"
                     }
                 }
             }
@@ -47,7 +45,6 @@ pipeline {
             steps {
                 script {
                     unstash 'tfvars'
-                    unstash 'tfstate'
                     catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.awsCredentialsId]]) {
                             sh "terraform plan -var-file=terraform.tfvars -var='name=${params.name}'"
