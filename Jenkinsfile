@@ -50,7 +50,7 @@ pipeline {
                             sh "terraform plan -var-file=terraform.tfvars -var='name=${params.name}'"
                         }
                     }
-                    stash includes: 'terraform.tfstate, terraform.tfstate.*', name: 'tfstate'
+                   // stash includes: 'terraform.tfstate, terraform.tfstate.*', name: 'tfstate'
                 }
             }
         }
