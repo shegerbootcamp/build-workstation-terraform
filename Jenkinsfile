@@ -11,11 +11,6 @@ pipeline {
 
     stages {
         stage('Download terraform.tfvars') {
-            when {
-                not {
-                    expression { return params.destroy }
-                }
-            }
             steps {
                 script {
                     // Download terraform.tfvars from S3 bucket
