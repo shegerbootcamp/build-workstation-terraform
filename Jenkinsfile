@@ -22,11 +22,6 @@ pipeline {
         }
 
         stage('Initialize') {
-            when {
-                not {
-                    expression { return params.destroy }
-                }
-            }
             steps {
                 script {
                     catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
