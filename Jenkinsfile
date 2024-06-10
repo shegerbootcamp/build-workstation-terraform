@@ -79,8 +79,7 @@ pipeline {
             }
             steps {
                 script {
-                    unstash 'tfvars'
-                    unstash 'tfstate'
+                   
                     catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                         input message: "Are you sure you want to destroy resources?", ok: "Yes"
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.awsCredentialsId]]) {
