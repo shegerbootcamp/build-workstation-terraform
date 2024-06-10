@@ -13,7 +13,9 @@ pipeline {
             steps {
                 script {
                     // Download terraform.tfvars from S3 bucket
-                    sh 'aws s3 cp s3://tfvars2024/terraform.tfvars .'
+                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.awsCredentialsId]]) {
+                        sh 'aws s3 cp s3://tfvars2024/terraform.tfvars .'
+                    }
                 }
             }
         }
