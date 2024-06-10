@@ -42,27 +42,12 @@ pipeline {
             }
         }
 
-        stage('Confirm Apply') {
-            steps {
-                script {
-                    userInput = input(
-                        id: 'confirmApply',
-                        message: 'Are you sure you want to apply changes?',
-                        parameters: [booleanParam(defaultValue: false, description: 'Proceed with apply')]
-                    )
-                    if (!userInput) {
-                        error('Aborted by user')
-                    }
-                }
-            }
-        }
-
         stage('Apply') {
             steps {
                 script {
                     catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.awsCredentialsId]]) {
-                            sh "terraform apply -var-file=terraform.tfvars -var='name=${params.name}'"
+                            sh "terraform apply -var-file=terraform.tfvars -var='name=${params.name}' -auto-approve"
                         }
                     }
                 }
