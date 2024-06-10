@@ -11,17 +11,6 @@ pipeline {
 
     stages {
         stage('Download terraform.tfvars') {
-            steps {
-                script {
-                    // Download terraform.tfvars from S3 bucket
-                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.awsCredentialsId]]) {
-                        sh 'aws s3 cp s3://tfvars2024/terraform.tfvars .'
-                    }
-                }
-            }
-        }
-
-        stage('Initialize') {
             when {
                 not {
                     expression { return params.destroy }
@@ -29,8 +18,22 @@ pipeline {
             }
             steps {
                 script {
+                    // Download terraform.tfvars from S3 bucket
+                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.awsCredentialsId]]) {
+                        sh 'aws s3 cp s3://tfvars2024/terraform.tfvars .'
+                    }
+                    stash includes: 'terraform.tfvars', name: 'tfvars'
+                }
+            }
+        }
+
+        stage('Initialize') {
+            steps {
+                script {
+                    unstash 'tfvars'
                     catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                         sh 'terraform init'
+                        stash includes: 'terraform.tfstate, terraform.tfstate.*', name: 'tfstate'
                     }
                 }
             }
@@ -44,11 +47,14 @@ pipeline {
             }
             steps {
                 script {
+                    unstash 'tfvars'
+                    unstash 'tfstate'
                     catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.awsCredentialsId]]) {
                             sh "terraform plan -var-file=terraform.tfvars -var='name=${params.name}'"
                         }
                     }
+                    stash includes: 'terraform.tfstate, terraform.tfstate.*', name: 'tfstate'
                 }
             }
         }
@@ -61,11 +67,14 @@ pipeline {
             }
             steps {
                 script {
+                    unstash 'tfvars'
+                    unstash 'tfstate'
                     catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.awsCredentialsId]]) {
                             sh "terraform apply -var-file=terraform.tfvars -var='name=${params.name}' -auto-approve"
                         }
                     }
+                    stash includes: 'terraform.tfstate, terraform.tfstate.*', name: 'tfstate'
                 }
             }
         }
@@ -76,6 +85,8 @@ pipeline {
             }
             steps {
                 script {
+                    unstash 'tfvars'
+                    unstash 'tfstate'
                     catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                         input message: "Are you sure you want to destroy resources?", ok: "Yes"
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.awsCredentialsId]]) {
