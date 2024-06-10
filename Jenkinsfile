@@ -6,11 +6,16 @@ pipeline {
     parameters {
         string(name: 'name', defaultValue: '', description: 'The name variable for Terraform')
         string(name: 'awsCredentialsId', defaultValue: '', description: 'AWS credentials ID')
-        booleanParam(name: 'destroy', defaultValue: false, description: 'Check this to run destroy after apply')
+        booleanParam(name: 'destroy', defaultValue: false, description: 'Check this to run destroy')
     }
 
     stages {
         stage('Download terraform.tfvars') {
+            when {
+                not {
+                    expression { return params.destroy }
+                }
+            }
             steps {
                 script {
                     // Download terraform.tfvars from S3 bucket
@@ -22,6 +27,11 @@ pipeline {
         }
 
         stage('Initialize') {
+            when {
+                not {
+                    expression { return params.destroy }
+                }
+            }
             steps {
                 script {
                     catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
@@ -32,6 +42,11 @@ pipeline {
         }
 
         stage('Plan') {
+            when {
+                not {
+                    expression { return params.destroy }
+                }
+            }
             steps {
                 script {
                     catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
@@ -44,6 +59,11 @@ pipeline {
         }
 
         stage('Apply') {
+            when {
+                not {
+                    expression { return params.destroy }
+                }
+            }
             steps {
                 script {
                     catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
@@ -64,7 +84,7 @@ pipeline {
                     catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                         input message: "Are you sure you want to destroy resources?", ok: "Yes"
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.awsCredentialsId]]) {
-                            sh "terraform destroy -var-file=terraform.tfvars -var='name=${params.name}'"
+                            sh "terraform destroy -var-file=terraform.tfvars -var='name=${params.name}' -auto-approve"
                         }
                     }
                 }
