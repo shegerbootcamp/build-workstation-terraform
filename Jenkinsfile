@@ -69,7 +69,6 @@ pipeline {
                             sh "terraform apply -var-file=terraform.tfvars -var='name=${params.name}' -auto-approve"
                         }
                     }
-                    stash includes: 'terraform.tfstate, terraform.tfstate.*', name: 'tfstate'
                 }
             }
         }
