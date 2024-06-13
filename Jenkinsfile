@@ -7,7 +7,8 @@ pipeline {
         string(name: 'name', defaultValue: '', description: 'The name variable for Terraform')
         string(name: 'awsCredentialsId', defaultValue: '', description: 'AWS credentials ID')
         booleanParam(name: 'destroy', defaultValue: false, description: 'Check this to run destroy')
-        string(name: 'bucketname', defaultValue: '', description: 'S3 bucket name for Terraform backend')
+        string(name: 'bucketname', defaultValue: 'ssh-aws-parameter-store', description: 'S3 bucket name for Terraform backend')
+        string(name: 'dynamodb_tablename', defaultValue: 'terraform_locks', description: 'S3 bucket name for Terraform backend')
     }
 
     stages {
@@ -88,7 +89,7 @@ pipeline {
                         input message: "Are you sure you want to destroy resources?", ok: "Yes"
                         unstash 'tfvars'
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.awsCredentialsId]]) {
-                            sh "terraform init -reconfigure -backend-config=bucket=${params.bucketname}"
+                            sh "terraform init -reconfigure -backend-config=bucket=${params.bucketname} -backend-config=dynamodb_table=${params.bucketname}"
                             sh "terraform workspace select ${params.name}"
                             def destroyOutput = sh(script: "terraform destroy -auto-approve -var-file=terraform.tfvars -var='name=${params.name}'", returnStdout: true).trim()
                             echo destroyOutput
