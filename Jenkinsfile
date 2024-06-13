@@ -7,6 +7,7 @@ pipeline {
         string(name: 'name', defaultValue: '', description: 'The name variable for Terraform')
         string(name: 'awsCredentialsId', defaultValue: '', description: 'AWS credentials ID')
         booleanParam(name: 'destroy', defaultValue: false, description: 'Check this to run destroy')
+        string(name: 'bucketname', defaultValue: '', description: 'S3 bucket name for Terraform backend')
     }
 
     stages {
@@ -50,7 +51,6 @@ pipeline {
                             sh "terraform plan -var-file=terraform.tfvars -var='name=${params.name}'"
                         }
                     }
-                   // stash includes: 'terraform.tfstate, terraform.tfstate.*', name: 'tfstate'
                 }
             }
         }
@@ -79,17 +79,16 @@ pipeline {
             }
             steps {
                 script {
-                   
                     catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                         input message: "Are you sure you want to destroy resources?", ok: "Yes"
+                        unstash 'tfvars'
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.awsCredentialsId]]) {
-                            def destroyOutput = sh(script: "terraform destroy -var-file=terraform.tfvars -var='name=${params.name}' -auto-approve", returnStdout: true).trim()
+                            sh "terraform init -reconfigure -backend-config=${params.bucketname}"
+                            sh "terraform workspace select ${params.name}"
+                            def destroyOutput = sh(script: "terraform destroy -force -no-color -var-file=terraform.tfvars -var 'name=${params.name}'", returnStdout: true).trim()
                             echo destroyOutput
-
-                            if (destroyOutput.contains("No changes. Infrastructure is up-to-date.")) {
+                            if (destroyOutput.contains("No changes. Infrastructure is up-to-date.") || destroyOutput.contains("Destroy complete! Resources: 0 destroyed.")) {
                                 error("No resources to destroy")
-                            } else if (destroyOutput.contains("Destroy complete! Resources: 0 destroyed.")) {
-                                error("No resources were destroyed")
                             }
                         }
                     }
