@@ -24,6 +24,11 @@ pipeline {
         }
 
         stage('Initialize') {
+            when {
+                not {
+                    expression { return params.destroy }
+                }
+            }
             steps {
                 script {
                     unstash 'tfvars'
@@ -83,9 +88,9 @@ pipeline {
                         input message: "Are you sure you want to destroy resources?", ok: "Yes"
                         unstash 'tfvars'
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.awsCredentialsId]]) {
-                            sh "terraform init -reconfigure -backend-config=${params.bucketname}"
+                            sh "terraform init -reconfigure -backend-config=bucket=${params.bucketname}"
                             sh "terraform workspace select ${params.name}"
-                            def destroyOutput = sh(script: "terraform destroy -force -no-color -var-file=terraform.tfvars -var 'name=${params.name}'", returnStdout: true).trim()
+                            def destroyOutput = sh(script: "terraform destroy -auto-approve -var-file=terraform.tfvars -var='name=${params.name}'", returnStdout: true).trim()
                             echo destroyOutput
                             if (destroyOutput.contains("No changes. Infrastructure is up-to-date.") || destroyOutput.contains("Destroy complete! Resources: 0 destroyed.")) {
                                 error("No resources to destroy")
