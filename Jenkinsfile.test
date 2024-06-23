@@ -1,6 +1,6 @@
 // Jenkinsfile
 
-@Library('terraformUtils') _
+@Library('terraformUtils@refactore-jenkinsfile') _
 
 pipeline {
     agent {
