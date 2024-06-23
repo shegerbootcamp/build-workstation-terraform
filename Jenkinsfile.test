@@ -1,0 +1,76 @@
+// Jenkinsfile
+
+@Library('terraformUtils') _
+
+pipeline {
+    agent {
+        dockerfile true
+    }
+
+    parameters {
+        string(name: 'name', defaultValue: '', description: 'The name variable for Terraform')
+        string(name: 'awsCredentialsId', defaultValue: '', description: 'AWS credentials ID')
+        booleanParam(name: 'destroy', defaultValue: false, description: 'Check this to run destroy')
+        string(name: 'bucketname', defaultValue: 'ssh-aws-parameter-store', description: 'S3 bucket name for Terraform backend')
+    }
+
+    stages {
+        stage('Download terraform.tfvars') {
+            steps {
+                script {
+                    downloadTerraformTFVars(params.awsCredentialsId)
+                }
+            }
+        }
+
+        stage('Initialize') {
+            when {
+                not {
+                    expression { return params.destroy }
+                }
+            }
+            steps {
+                script {
+                    initializeTerraform(params.awsCredentialsId, params.name)
+                }
+            }
+        }
+
+        stage('Plan') {
+            when {
+                not {
+                    expression { return params.destroy }
+                }
+            }
+            steps {
+                script {
+                    planTerraform(params.awsCredentialsId, params.name)
+                }
+            }
+        }
+
+        stage('Apply') {
+            when {
+                not {
+                    expression { return params.destroy }
+                }
+            }
+            steps {
+                script {
+                    applyTerraform(params.awsCredentialsId, params.name)
+                }
+            }
+        }
+
+        stage('Destroy') {
+            when {
+                expression { return params.destroy }
+            }
+            steps {
+                script {
+                    destroyTerraform(params.awsCredentialsId, params.name, params.bucketname)
+                }
+            }
+        }
+    }
+}
