@@ -6,8 +6,11 @@ pipeline {
     parameters {
         string(name: 'name', defaultValue: '', description: 'The name variable for Terraform')
         string(name: 'awsCredentialsId', defaultValue: '', description: 'AWS credentials ID')
-        booleanParam(name: 'destroy', defaultValue: false, description: 'Check this to run destroy')
+        //booleanParam(name: 'destroy', defaultValue: false, description: 'Check this to run destroy')
         string(name: 'bucketname', defaultValue: 'ssh-aws-parameter-store', description: 'S3 bucket name for Terraform backend')
+        choice (name: 'ACTION',
+				choices: [ 'plan', 'apply', 'destroy'],
+				description: 'Run terraform plan / apply / destroy')
     }
 
     stages {
@@ -18,42 +21,40 @@ pipeline {
         }
 
         stage('Initialize') {
-            when {
-                not {
-                    expression { return params.destroy }
-                }
-            }
             steps {
                 initializeTerraform()
             }
         }
 
         stage('Plan') {
-            when {
-                not {
-                    expression { return params.destroy }
-                }
-            }
+            when { anyOf
+					{
+						environment name: 'ACTION', value: 'plan';
+						environment name: 'ACTION', value: 'apply'
+					}
+				}
             steps {
                 planTerraform()
             }
         }
 
         stage('Apply') {
-            when {
-                not {
-                    expression { return params.destroy }
-                }
-            }
+            when { anyOf
+					{
+						environment name: 'ACTION', value: 'apply'
+					}
+				}
             steps {
                 applyTerraform()
             }
         }
 
         stage('Destroy') {
-            when {
-                expression { return params.destroy }
-            }
+            when { anyOf
+					{
+						environment name: 'ACTION', value: 'destroy'
+					}
+				}
             steps {
                 destroyTerraform()
             }
