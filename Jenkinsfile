@@ -108,7 +108,6 @@ def applyTerraform() {
 def destroyTerraform() {
     script {
         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-            input message: "Are you sure you want to destroy resources?", ok: "Yes"
             unstash 'tfvars'
             withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.awsCredentialsId]]) {
                 sh "terraform init -reconfigure -backend-config=bucket=${params.bucketname}"
