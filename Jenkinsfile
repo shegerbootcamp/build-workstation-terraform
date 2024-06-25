@@ -85,39 +85,28 @@ def initializeTerraform() {
 
 def planTerraform() {
     script {
-        unstash 'tfvars'
-        catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
             withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.awsCredentialsId]]) {
                 sh "terraform plan -var-file=terraform.tfvars -var='name=${params.name}'"
-            }
         }
     }
 }
 
 def applyTerraform() {
     script {
-        unstash 'tfvars'
-        catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
             withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.awsCredentialsId]]) {
                 sh "terraform apply -var-file=terraform.tfvars -var='name=${params.name}' -auto-approve"
-            }
         }
     }
 }
 
 def destroyTerraform() {
     script {
-        catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-            unstash 'tfvars'
+
             withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: params.awsCredentialsId]]) {
                 sh "terraform init -reconfigure -backend-config=bucket=${params.bucketname}"
                 sh "terraform workspace select ${params.name}"
-                def destroyOutput = sh(script: "terraform destroy -auto-approve -var-file=terraform.tfvars -var='name=${params.name}'", returnStdout: true).trim()
-                echo destroyOutput
-                if (destroyOutput.contains("No changes. Infrastructure is up-to-date.") || destroyOutput.contains("Destroy complete! Resources: 0 destroyed.")) {
-                    error("No resources to destroy")
-                }
+                sh "terraform destroy -var-file=terraform.tfvars -var='name=${params.name}' -auto-approve"
+                
             }
         }
     }
-}
