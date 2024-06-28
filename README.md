@@ -1,42 +1,45 @@
-#!/bin/bash
 
-# Check if username is provided as input
-if [ -z "$1" ]; then
-  echo "Usage: $0 <username>"
-  exit 1
-fi
+---
 
-USERNAME=$1
+# Jenkins Pipeline for Workstation Creation and Termination
 
-# Directory to store keys
-mkdir -p aws-access-keys
-KEY_DIR="aws-access-keys"
+This Jenkins pipeline automates the process of creating and terminating a development workstation on AWS EC2. It assumes you have an AWS account and appropriate IAM roles set up for Jenkins to interact with AWS services.
 
-# Remove existing keys if they exist
-if [ -f "$KEY_DIR/${USERNAME}-private.pem" ]; then
-  rm "$KEY_DIR/${USERNAME}-private.pem"
-fi
+## Pipeline Overview
 
-if [ -f "$KEY_DIR/${USERNAME}-pub.pem" ]; then
-  rm "$KEY_DIR/${USERNAME}-pub.pem"
-fi
+### Stage 1: Create Workstation
 
-# Run AWS SSM command to get the private key and save it
-aws ssm get-parameter --name "/ec2/key-pair/${USERNAME}/private-rsa-key-pem" --output text --query "Parameter.Value" > "$KEY_DIR/${USERNAME}-private.pem"
+1. **Input Parameters:**
+   - `user_name`: The username for the developer workstation.
 
-# Check if the command was successful
-if [ $? -ne 0 ]; then
-  echo "Failed to retrieve the private key. Please check the username and try again."
-  exit 1
-fi
+2. **Execution:**
+   - Uses AWS CLI (`aws ec2 run-instances`) to launch a new EC2 instance (workstation) based on provided parameters.
+   - Tags the instance appropriately for identification and tracking.
 
-# Run AWS SSM command to get the public key and save it
-aws ssm get-parameter --name "/ec2/key-pair/${USERNAME}/public-rsa-key-openssh" --output text --query "Parameter.Value" > "$KEY_DIR/${USERNAME}-pub.pem"
+3. **Verification:**
+   - Monitors the AWS console or uses AWS CLI (`aws ec2 describe-instances`) to verify that the EC2 instance has been successfully created.
+   - Waits for Watchmaker (or other configuration management tool) to complete its setup on the instance.
 
-# Check if the command was successful
-if [ $? -ne 0 ]; then
-  echo "Failed to retrieve the public key. Please check the username and try again."
-  exit 1
-fi
+### Stage 2: Verify EC2 Instance and Watchmaker Completion
 
-echo "Keys successfully retrieved and saved to $KEY_DIR directory"
+1. **Execution:**
+   - Continuously checks the AWS EC2 instance state and Watchmaker completion status.
+   - Proceeds to the next stage once the EC2 instance is running and Watchmaker has completed its configuration.
+
+### Stage 3: Post-Build Actions
+
+1. **Execution:**
+   - Upon a successful build (green build), SSH into the DevOps workstation.
+   - Run a script (`ssh-key-retrieve.sh`) to download the user's SSH public and private keys.
+   - Ensure AWS CLI is properly configured on the DevOps workstation for this step.
+
+2. **Key Conversion (if necessary):**
+   - Convert the downloaded SSH private key from PEM to PPK format if using Putty for SSH access.
+
+### Stage 4: Notification to Developer
+
+1. **Outcome:**
+   - After successful completion, notify the developer with the following information:
+     - Workstation IP address.
+     - Public and private SSH keys for accessing the workstation.
+
