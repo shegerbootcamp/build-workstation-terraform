@@ -23,33 +23,37 @@ resource "null_resource" "fetch_public_key" {
 }
 
 data "local_file" "public_key" {
-  filename  = "${path.module}/keystore/${module.ec2_key_pair.key_pair_name}.pem"
+  # Only create the resource if the file exists
+  count    = fileexists("${path.module}/keystore/${module.ec2_key_pair.key_pair_name}.pem") ? 1 : 0
+  filename = "${path.module}/keystore/${module.ec2_key_pair.key_pair_name}.pem"
   depends_on = [null_resource.fetch_public_key]
 }
 
 data "template_file" "cloud_init" {
+  count = length(data.local_file.public_key) > 0 ? 1 : 0
   template = file("${path.module}/cloud-init.yaml")
   vars = {
     USERNAME           = var.name
-    PUBLIC_KEY_CONTENT = data.local_file.public_key.content
+    PUBLIC_KEY_CONTENT = length(data.local_file.public_key) > 0 ? data.local_file.public_key[0].content : ""
   }
 }
 
 # Render a part using a `template_file`
 data "template_file" "script" {
-  template = "${file("${path.module}/scripts/userdata.tpl")}"
+  template = file("${path.module}/scripts/userdata.tpl")
 }
 
 data "template_cloudinit_config" "config" {
+  count         = length(data.template_file.cloud_init)
   gzip          = true
   base64_encode = true
-# add userdata in the cloud config
+
   part {
     filename     = "cloud-init.yaml"
     content_type = "text/cloud-config"
-    content      = data.template_file.cloud_init.rendered
+    content      = data.template_file.cloud_init[count.index].rendered
   }
-# add additional server config script
+
   part {
     filename     = "init.tpl"
     content_type = "text/x-shellscript"
@@ -61,7 +65,7 @@ resource "aws_instance" "ec2_instance" {
   ami           = var.ami_id
   instance_type = var.instance_type
   key_name      = module.ec2_key_pair.key_pair_name
-  user_data_base64 = "${data.template_cloudinit_config.config.rendered}"
+  user_data_base64 = length(data.template_file.cloud_init) > 0 ? data.template_cloudinit_config.config[0].rendered : ""
 
   tags = {
     Name        = var.instance_name

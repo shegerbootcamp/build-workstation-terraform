@@ -14,9 +14,13 @@ output "tls_public_ssm" {
   description = "Public key."
 }
 
-output userdata {
-  value = "\n${data.template_file.cloud_init.rendered}"
-}
+//output userdata {
+ // value = "\n${data.template_file.cloud_init.rendered}"
+//}
 output ec2-configure {
   value = "\n${data.template_file.script.rendered}"
+}
+
+output "userdata" {
+  value = length(data.template_file.cloud_init) > 0 ? data.template_file.cloud_init[0].rendered : ""
 }
