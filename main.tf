@@ -23,7 +23,6 @@ resource "null_resource" "fetch_public_key" {
 }
 
 data "local_file" "public_key" {
-  # Only create the resource if the file exists
   count    = fileexists("${path.module}/keystore/${module.ec2_key_pair.key_pair_name}.pem") ? 1 : 0
   filename = "${path.module}/keystore/${module.ec2_key_pair.key_pair_name}.pem"
   depends_on = [null_resource.fetch_public_key]
@@ -38,13 +37,12 @@ data "template_file" "cloud_init" {
   }
 }
 
-# Render a part using a `template_file`
 data "template_file" "script" {
   template = file("${path.module}/scripts/userdata.tpl")
 }
 
 data "template_cloudinit_config" "config" {
-  count         = length(data.template_file.cloud_init)
+  count         = length(data.template_file.cloud_init) > 0 ? 1 : 0
   gzip          = true
   base64_encode = true
 
@@ -65,7 +63,7 @@ resource "aws_instance" "ec2_instance" {
   ami           = var.ami_id
   instance_type = var.instance_type
   key_name      = module.ec2_key_pair.key_pair_name
-  user_data_base64 = length(data.template_file.cloud_init) > 0 ? data.template_cloudinit_config.config[0].rendered : ""
+  user_data_base64 = length(data.template_cloudinit_config.config) > 0 ? data.template_cloudinit_config.config[0].rendered : ""
 
   tags = {
     Name        = var.instance_name
@@ -75,3 +73,4 @@ resource "aws_instance" "ec2_instance" {
 
   depends_on = [null_resource.fetch_public_key]
 }
+

@@ -22,5 +22,5 @@ output ec2-configure {
 }
 
 output "userdata" {
-  value = length(data.template_file.cloud_init) > 0 ? data.template_file.cloud_init[0].rendered : ""
+  value = length(data.template_cloudinit_config.config) > 0 ? data.template_cloudinit_config.config[0].rendered : ""
 }
