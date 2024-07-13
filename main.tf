@@ -53,7 +53,7 @@ data "template_cloudinit_config" "config" {
   }
 
   part {
-    filename     = "init.tpl"
+    filename     = "userdata.tpl"
     content_type = "text/x-shellscript"
     content      = data.template_file.script.rendered
   }
@@ -63,7 +63,7 @@ resource "aws_instance" "ec2_instance" {
   ami           = var.ami_id
   instance_type = var.instance_type
   key_name      = module.ec2_key_pair.key_pair_name
-  user_data_base64 = length(data.template_cloudinit_config.config) > 0 ? data.template_cloudinit_config.config[0].rendered : ""
+  user_data_base64 = length(data.template_file.cloud_init) > 0 ? data.template_cloudinit_config.config[0].rendered : ""
 
   tags = {
     Name        = var.instance_name
