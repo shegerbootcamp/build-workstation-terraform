@@ -15,10 +15,10 @@ output "tls_public_ssm" {
   sensitive   = true
 }
 
-output "userdata" {
-  value       = length(data.template_file.cloud_init) > 0 ? data.template_cloudinit_config.config[0].rendered : ""
-  description = "The user data for the EC2 instance in base64 encoded format."
-}
+//output "userdata" {
+  //value       = length(data.template_file.cloud_init) > 0 ? data.template_cloudinit_config.config[0].rendered : ""
+  //description = "The user data for the EC2 instance in base64 encoded format."
+//}
 
 output "ec2_configure" {
   value       = data.template_file.script.rendered

@@ -39,7 +39,6 @@ locals {
 
 # Template file data source for cloud-init.yaml
 data "template_file" "cloud_init" {
-  count = length(data.local_file.public_key) > 0 ? 1 : 0
   template = local.cloud_init_template
   vars = {
     USERNAME           = var.name
@@ -54,14 +53,13 @@ data "template_file" "script" {
 
 # Combine cloud-init.yaml and userdata.sh into a single cloud-init configuration
 data "template_cloudinit_config" "config" {
-  count         = length(data.template_file.cloud_init) > 0 ? 1 : 0
   gzip          = true
   base64_encode = true
 
   part {
     filename     = "cloud-init.yaml"
     content_type = "text/cloud-config"
-    content      = data.template_file.cloud_init[count.index].rendered
+    content      = data.template_file.cloud_init.rendered
   }
 
   part {
@@ -76,7 +74,7 @@ resource "aws_instance" "ec2_instance" {
   ami           = var.ami_id
   instance_type = var.instance_type
   key_name      = module.ec2_key_pair.key_pair_name
-  user_data_base64 = length(data.template_file.cloud_init) > 0 ? data.template_cloudinit_config.config[0].rendered : ""
+  user_data_base64 = data.template_cloudinit_config.config.rendered
 
   tags = {
     Name        = var.instance_name
@@ -94,7 +92,7 @@ output "cloud_init_template" {
 }
 
 output "cloud_init_rendered" {
-  value       = length(data.template_file.cloud_init) > 0 ? data.template_file.cloud_init[0].rendered : "No rendered content"
+  value       = data.template_file.cloud_init.rendered
   description = "Rendered cloud-init content."
 }
 
@@ -104,11 +102,11 @@ output "script_rendered" {
 }
 
 output "user_data_base64" {
-  value       = length(data.template_file.cloud_init) > 0 ? data.template_cloudinit_config.config[0].rendered : "No user data"
+  value       = data.template_cloudinit_config.config.rendered
   description = "Base64 encoded user data."
 }
 
 output "rendered_cloud_init_config" {
-  value       = length(data.template_cloudinit_config.config) > 0 ? data.template_cloudinit_config.config[0].rendered : "No rendered content"
+  value       = data.template_cloudinit_config.config.rendered
   description = "Rendered cloud-init configuration."
 }

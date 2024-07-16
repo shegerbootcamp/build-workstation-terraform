@@ -6,11 +6,11 @@ yum update -y
 yum install git -y
 yum install docker -y
 yum install docker-compose -y
-yum install python3.11 -y
+yum install python3 -y
 yum install java -y
 yum install maven -y
 
-python3.11 -m pip install watchmaker
+python3 -m pip install watchmaker
 
 PYPI_URL=https://pypi.org/simple
 
