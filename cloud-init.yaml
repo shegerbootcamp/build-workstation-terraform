@@ -9,13 +9,3 @@ users:
     lock_passwd: false
     ssh-authorized-keys:
       - ${PUBLIC_KEY_CONTENT}
-write_files:
-  - path: /run/scripts/test-script.sh
-    content: |
-      #!/bin/bash
-
-      echo 'Script executed successfully!' >> /run/testing.txt      
-    permissions: '0755'
-
-runcmd:
-  - [ sh, "/run/scripts/test-script.sh" ]

@@ -1,9 +1,9 @@
-# Configure the AWS provider with the specified region
+# AWS Provider Configuration
 provider "aws" {
   region = var.aws_region
 }
 
-# Module to create an EC2 key pair
+# EC2 Key Pair Module
 module "ec2_key_pair" {
   source = "git::https://github.com/jemalcloud/terrafom-ssh-module.git"
   name   = var.name
@@ -13,7 +13,7 @@ module "ec2_key_pair" {
   }
 }
 
-# Resource to fetch the public key from AWS SSM and store it locally
+# Fetch Public Key
 resource "null_resource" "fetch_public_key" {
   provisioner "local-exec" {
     command = <<-EOT
@@ -24,57 +24,33 @@ resource "null_resource" "fetch_public_key" {
   depends_on = [module.ec2_key_pair]
 }
 
-# Data source to read the public key file
+# Read Public Key File
 data "local_file" "public_key" {
   count    = fileexists("${path.module}/keystore/${module.ec2_key_pair.key_pair_name}.pem") ? 1 : 0
   filename = "${path.module}/keystore/${module.ec2_key_pair.key_pair_name}.pem"
   depends_on = [null_resource.fetch_public_key]
 }
 
-# Local variables to store the content of the cloud-init and userdata scripts
+# Local Variables for Script Templates
 locals {
-  cloud_init_template = file("${path.module}/cloud-init.yaml")
-  script_template     = file("${path.module}/scripts/userdata.sh")
+  script_template = file("${path.module}/scripts/userdata.sh")
 }
 
-# Template file data source for cloud-init.yaml
-data "template_file" "cloud_init" {
-  template = local.cloud_init_template
+# Template for userdata.sh
+data "template_file" "script" {
+  template = local.script_template
   vars = {
     USERNAME           = var.name
     PUBLIC_KEY_CONTENT = length(data.local_file.public_key) > 0 ? data.local_file.public_key[0].content : ""
   }
 }
 
-# Template file data source for userdata.sh
-data "template_file" "script" {
-  template = local.script_template
-}
-
-# Combine cloud-init.yaml and userdata.sh into a single cloud-init configuration
-data "template_cloudinit_config" "config" {
-  gzip          = true
-  base64_encode = true
-
-  part {
-    filename     = "cloud-init.yaml"
-    content_type = "text/cloud-config"
-    content      = data.template_file.cloud_init.rendered
-  }
-
-  part {
-    filename     = "userdata.sh"
-    content_type = "text/x-shellscript"
-    content      = data.template_file.script.rendered
-  }
-}
-
-# AWS EC2 instance resource
+# AWS EC2 Instance
 resource "aws_instance" "ec2_instance" {
-  ami           = var.ami_id
-  instance_type = var.instance_type
-  key_name      = module.ec2_key_pair.key_pair_name
-  user_data_base64 = data.template_cloudinit_config.config.rendered
+  ami               = var.ami_id
+  instance_type     = var.instance_type
+  key_name          = module.ec2_key_pair.key_pair_name
+  user_data         = data.template_file.script.rendered
 
   tags = {
     Name        = var.instance_name
@@ -85,28 +61,8 @@ resource "aws_instance" "ec2_instance" {
   depends_on = [null_resource.fetch_public_key]
 }
 
-# Outputs for debugging and verification
-output "cloud_init_template" {
-  value       = file("${path.module}/cloud-init.yaml")
-  description = "Raw content of the cloud-init.yaml template file."
-}
-
-output "cloud_init_rendered" {
-  value       = data.template_file.cloud_init.rendered
-  description = "Rendered cloud-init content."
-}
-
+# Outputs for Debugging
 output "script_rendered" {
   value       = data.template_file.script.rendered
   description = "Rendered user data script."
-}
-
-output "user_data_base64" {
-  value       = data.template_cloudinit_config.config.rendered
-  description = "Base64 encoded user data."
-}
-
-output "rendered_cloud_init_config" {
-  value       = data.template_cloudinit_config.config.rendered
-  description = "Rendered cloud-init configuration."
 }
