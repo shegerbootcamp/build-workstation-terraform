@@ -12,23 +12,12 @@ module "ec2_key_pair" {
     Project     = var.project
   }
 }
+# Fetch Public Key from AWS SSM Parameter Store
+data "aws_ssm_parameter" "public_key" {
+  name = "/ec2/key-pair/${module.ec2_key_pair.key_pair_name}/public-rsa-key-openssh"
+  with_decryption = true
 
-# Fetch Public Key
-resource "null_resource" "fetch_public_key" {
-  provisioner "local-exec" {
-    command = <<-EOT
-      mkdir -p keystore
-      aws ssm get-parameter --name "/ec2/key-pair/${module.ec2_key_pair.key_pair_name}/public-rsa-key-openssh" --region "${var.aws_region}" --with-decryption --query "Parameter.Value" --output text > keystore/${module.ec2_key_pair.key_pair_name}.pem
-    EOT
-  }
   depends_on = [module.ec2_key_pair]
-}
-
-# Read Public Key File
-data "local_file" "public_key" {
-  count    = fileexists("${path.module}/keystore/${module.ec2_key_pair.key_pair_name}.pem") ? 1 : 0
-  filename = "${path.module}/keystore/${module.ec2_key_pair.key_pair_name}.pem"
-  depends_on = [null_resource.fetch_public_key]
 }
 
 # Local Variables for Script Templates
@@ -40,9 +29,13 @@ locals {
 data "template_file" "script" {
   template = local.script_template
   vars = {
-    USERNAME           = var.name
-    PUBLIC_KEY_CONTENT = length(data.local_file.public_key) > 0 ? data.local_file.public_key[0].content : ""
+    USERNAME = var.name
+    AWS_REGION = var.aws_region
+    KEY_NAME = module.ec2_key_pair.key_pair_name
+    PUBLIC_KEY_CONTENT = data.aws_ssm_parameter.public_key.value
   }
+
+  depends_on = [data.aws_ssm_parameter.public_key]
 }
 
 # AWS EC2 Instance
@@ -58,7 +51,7 @@ resource "aws_instance" "ec2_instance" {
     Project     = var.project
   }
 
-  depends_on = [null_resource.fetch_public_key]
+  depends_on = [module.ec2_key_pair]
 }
 
 # Outputs for Debugging
